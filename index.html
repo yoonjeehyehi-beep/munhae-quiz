@@ -726,7 +726,7 @@ function rankInto(el,big,limit,myId){
   el._pos=next;
 }
 function netLine(){
-  if(!NET.db) return fbConfigured()?'온라인 서버에 연결하지 못했어요. 이 기기에서만 기록돼요.':'온라인 설정 전이라 이 기기에서만 기록돼요.';
+  if(!NET.db) return fbConfigured()?'온라인 서버에 연결하지 못했어요. 이 기기에서만 기록돼요.':'이 기기에서 한 기록이에요.';
   if(!NET.room) return '방 코드를 넣으면 친구들과 실시간으로 순위를 겨뤄요.';
   const l=rankList(); const playing=l.filter(x=>x.status==='playing').length;
   return `방 ${NET.room} · ${l.length}명 참여${playing?` · ${playing}명 플레이 중`:''}`;
@@ -764,12 +764,12 @@ function home(){
   <section class="px player" aria-label="플레이어">
     <div class="prow"><label for="nick">이름</label><input id="nick" maxlength="14" autocomplete="off" placeholder="예: 20315 김민준" value="${esc(S.nick)}"><span class="need" id="need"></span></div>
     <div class="prow"><span class="lab">캐릭터</span><div class="chars" id="chars"></div></div>
-    <div class="prow"><label for="roomIn">방 코드</label><input id="roomIn" class="roomin" maxlength="6" autocomplete="off" placeholder="선생님 화면의 코드" value="${esc(S.room||'')}"><button class="pbtn blue sm" id="roomGo">참여</button><span class="need" id="roomMsg"></span></div>
+    ${NET.db?`<div class="prow"><label for="roomIn">방 코드</label><input id="roomIn" class="roomin" maxlength="6" autocomplete="off" placeholder="선생님 화면의 코드" value="${esc(S.room||'')}"><button class="pbtn blue sm" id="roomGo">참여</button><span class="need" id="roomMsg"></span></div>`:''}
   </section>
   <div class="homegrid">
     <div class="gamecol">
-      <button class="px gcard g1" id="goSpeed"><span id="ic1"></span><span><span class="badge" style="background:var(--yellow)">랭킹전 · 60초 타임어택</span><div class="gt">스피드 퀴즈</div><p>60초 동안 최대한 많이! 맞히면 +1초, 틀리면 -3초. 게임 중에도 내 순위가 실시간으로 바뀌어요.</p>
-        <span class="fun"><span>5연속 FEVER 2배</span><span>황금 문제 3배</span><span>5문제마다 보물 상자</span><span>실시간 순위</span></span></span></button>
+      <button class="px gcard g1" id="goSpeed"><span id="ic1"></span><span><span class="badge" style="background:var(--yellow)">랭킹전 · 60초 타임어택</span><div class="gt">스피드 퀴즈</div><p>60초 동안 최대한 많이! 맞히면 +1초, 틀리면 -3초.${NET.db?' 게임 중에도 내 순위가 실시간으로 바뀌어요.':' 시간이 다 될 때까지 계속 도전해요.'}</p>
+        <span class="fun"><span>5연속 FEVER 2배</span><span>황금 문제 3배</span><span>5문제마다 보물 상자</span>${NET.db?'<span>실시간 순위</span>':'<span>콤보 칭찬</span>'}</span></span></button>
       <button class="px gcard g2" id="goBomb"><span id="ic2"></span><span><span class="badge" style="background:var(--peach)">폭탄 해제 작전</span><div class="gt">빈칸 폭탄</div><p>심지가 타기 전에 문장 빈칸에 맞는 낱말을 골라 폭탄을 해제! 하트 5개.</p>
         <span class="fun"><span>레벨 업</span><span>황금 폭탄 3배</span><span>보물 상자</span></span></span></button>
       <div class="extras">
@@ -779,7 +779,7 @@ function home(){
       </div>
     </div>
     <div class="px rankpanel">
-      <h2 class="h">실시간 랭킹</h2>
+      <h2 class="h">${NET.db?'실시간 랭킹':'이 기기 랭킹'}</h2>
       <div id="rank"></div>
       <div class="netline" id="netline"></div>
       <div class="waitnote" id="waitnote"></div>
@@ -795,7 +795,7 @@ function home(){
   $('#nick').oninput=e=>{ S.nick=e.target.value.trim(); save(); syncNeed(); };
   syncNeed();
   const doJoin=()=>{ const c=cleanRoom($('#roomIn').value); $('#roomIn').value=c; joinRoom(c); sfx.coin(); $('#roomMsg').textContent=c?(NET.db?`방 ${c}에 들어왔어요!`:'온라인 설정 전이라 방 기능을 쓸 수 없어요.'):'방에서 나왔어요.'; };
-  $('#roomGo').onclick=doJoin; $('#roomIn').onkeydown=e=>{ if(e.key==='Enter') doJoin(); };
+  if($('#roomGo')){ $('#roomGo').onclick=doJoin; $('#roomIn').onkeydown=e=>{ if(e.key==='Enter') doJoin(); }; }
   const need=fn=>()=>{ if(!S.nick){ sfx.oops(); $('#nick').focus(); shake($('.player')); return; } sfx.click(); fn(); };
   $('#goSpeed').onclick=need(()=>speedGame(false));
   $('#goBomb').onclick=need(bombGame);
@@ -834,19 +834,18 @@ function teacher(){
   if(!store.get('teacherRoom','')) store.set('teacherRoom',newRoomCode());
   const code=store.get('teacherRoom',''); joinRoom(code);
   if(NET.db) NET.db.ref('rooms/'+code+'/meta').update({createdAt:serverNow()}).catch(()=>{});
-  const url=location.origin+location.pathname+'?room='+code;
+  const url=location.origin+location.pathname+(NET.db?'?room='+code:'');
   app.innerHTML=`<section class="teach">
     <div class="px qrbox">
       <h2 class="h" style="font-size:2.1rem">QR 찍고 참여!</h2>
       <canvas id="qr" width="220" height="220" aria-label="참여용 QR 코드"></canvas>
-      <div class="roomcode"><small>방 코드</small>${esc(code)}</div>
-      ${NET.db?'':`<div class="warn">${fbConfigured()?'온라인 서버에 연결하지 못했어요. 인터넷과 설정을 확인해 주세요.':'아직 파이어베이스 설정 전이에요. 설명서 4~5단계를 따라 config.js를 채우면 여러 기기가 함께 겨룰 수 있어요.'}</div>`}
-      <button class="pbtn red" id="groupGo" ${NET.db?'':'disabled'}>다 같이 시작! (스피드 퀴즈)</button>
+      ${NET.db?`<div class="roomcode"><small>방 코드</small>${esc(code)}</div>
+      <button class="pbtn red" id="groupGo">다 같이 시작! (스피드 퀴즈)</button>
       <div class="hint" id="raceInfo">QR로 들어온 학생은 이름을 적고 기다리면 돼요.</div>
-      <div id="roundBox"></div>
+      <div id="roundBox"></div>`:`<div class="hint" style="font-size:1.3rem">학생은 QR을 찍고 이름을 적은 뒤 바로 게임을 시작하면 돼요.</div>`}
     </div>
     <div class="px rankpanel">
-      <div class="racehead"><h2 class="h" style="font-size:2.2rem">실시간 랭킹</h2><span class="raceclock" id="raceClock"></span></div>
+      <div class="racehead"><h2 class="h" style="font-size:2.2rem">${NET.db?'실시간 랭킹':'이 기기 랭킹'}</h2><span class="raceclock" id="raceClock"></span></div>
       <div id="rankBig"></div>
       <div class="netline" id="netline"></div>
     </div>
@@ -858,8 +857,8 @@ function teacher(){
     if(d>0){ el.textContent=`시작까지 ${Math.ceil(d/1000)}`; }
     else { const playing=rankList().filter(x=>x.status==='playing').length; const since=Math.floor(-d/1000); el.textContent=playing?`경기 중 · ${playing}명 플레이 중`:(since<200?'경기 끝!':''); if(!playing&&since>5&&since<200&&!raceEnd){ raceEnd=1; sfx.record(); fx.rain(200); playSong('menu'); } }
     raceT=setTimeout(tickRace,500); };
-  $('#groupGo').onclick=()=>{ if(!NET.db) return; const at=serverNow()+6000; NET.db.ref('rooms/'+code+'/meta').update({startAt:at,game:'speed'}).catch(()=>{}); raceEnd=0; sfx.start(); banner('다 같이 시작!','',1500); playSong('title'); $('#raceInfo').textContent='학생 화면에서 6초 뒤에 스피드 퀴즈가 시작돼요.'; };
-  const resetUI=()=>{ const box=$('#roundBox'); box.innerHTML='<button class="pbtn dark sm" id="reset">새 방 만들기 (랭킹 새로 시작)</button>'; $('#reset').onclick=ask; };
+  if($('#groupGo')) $('#groupGo').onclick=()=>{ if(!NET.db) return; const at=serverNow()+6000; NET.db.ref('rooms/'+code+'/meta').update({startAt:at,game:'speed'}).catch(()=>{}); raceEnd=0; sfx.start(); banner('다 같이 시작!','',1500); playSong('title'); $('#raceInfo').textContent='학생 화면에서 6초 뒤에 스피드 퀴즈가 시작돼요.'; };
+  const resetUI=()=>{ const box=$('#roundBox'); if(!box) return; box.innerHTML='<button class="pbtn dark sm" id="reset">새 방 만들기 (랭킹 새로 시작)</button>'; $('#reset').onclick=ask; };
   const ask=()=>{ const box=$('#roundBox'); box.innerHTML='<div class="confirm">새 방을 만들면 QR과 방 코드가 바뀌어요. 만들까요? <button class="pbtn red sm" id="yes">새 방</button><button class="pbtn dark sm" id="no">취소</button></div>';
     $('#yes').onclick=()=>{ store.set('teacherRoom',newRoomCode()); teacher(); }; $('#no').onclick=resetUI; };
   resetUI();
