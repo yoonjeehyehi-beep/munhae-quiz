@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        ".read": "$room.length <= 6",
+        "meta": {
+          ".write": true,
+          ".validate": "newData.hasChildren() && (!newData.child('startAt').exists() || newData.child('startAt').isNumber())"
+        },
+        "players": {
+          "$pid": {
+            ".write": "$pid.length <= 40",
+            ".validate": "newData.child('name').isString() && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() < 200000"
+          }
+        }
+      }
+    }
+  }
+}
